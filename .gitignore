@@ -1,0 +1,9 @@
+# Compiled output
+string_processing
+*.exe
+*.out
+*.o
+
+# OS files
+.DS_Store
+Thumbs.db
