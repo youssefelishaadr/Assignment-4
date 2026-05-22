@@ -80,7 +80,7 @@ g++ -O2 -std=c++17 -o string_processing string_processing.cpp
 | DATA STRUCTURE| STRUCTURE | Match found                 |
 | HELLO WORLD   | TEST      | No match                    |
 | MISSISSIPPI   | ISSI      | Multiple matches             |
-| ALGORITHM     | RITH      | match                    |
+| ALGORITHM     | RITH      | Match found               |
 
 > Full output for all test cases in `test_cases.txt`
 
