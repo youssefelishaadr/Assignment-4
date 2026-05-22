@@ -15,23 +15,23 @@ string textData = "";
 
 // ─── Statistics Struct ────────────────────────────────────────────────────────
 struct Statistics {
-    int    comparisons   = 0;
-    int    matches       = 0;
+    int    comparisons = 0;
+    int    matches = 0;
     double executionTime = 0.0;
-    string algorithm     = "";
+    string algorithm = "";
 };
 
-// ─── Function Declarations (Section 6) ───────────────────────────────────────
+// ─── Function Declarations ────────────────────────────────────────────────────
 void loadFile();
 void manualInput();
 void boyerMooreSearch();
 void rabinKarpSearch();
 void compareAlgorithms();
-void printStatistics(Statistics stats);
-void highlightMatches(string text, string pattern, vector<int> matches);
+void printStatistics(const Statistics& stats);
+void highlightMatches(const string& text, const string& pattern, const vector<int>& matches);
 
-vector<int> boyerMoore(string text, string pattern, Statistics &stats);
-vector<int> rabinKarp (string text, string pattern, Statistics &stats);
+vector<int> boyerMoore(const string& text, const string& pattern, Statistics& stats);
+vector<int> rabinKarp(const string& text, const string& pattern, Statistics& stats);
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 int main() {
@@ -52,13 +52,13 @@ int main() {
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         switch (choice) {
-            case 1: loadFile();           break;
-            case 2: manualInput();        break;
-            case 3: boyerMooreSearch();   break;
-            case 4: rabinKarpSearch();    break;
-            case 5: compareAlgorithms();  break;
-            case 6: cout << "Exiting...\n"; break;
-            default: cout << "Invalid choice.\n";
+        case 1: loadFile();           break;
+        case 2: manualInput();        break;
+        case 3: boyerMooreSearch();   break;
+        case 4: rabinKarpSearch();    break;
+        case 5: compareAlgorithms();  break;
+        case 6: cout << "Exiting...\n"; break;
+        default: cout << "Invalid choice.\n";
         }
 
     } while (choice != 6);
@@ -85,7 +85,7 @@ void loadFile() {
         textData += line + "\n";
 
     file.close();
-    cout << "File loaded successfully.\n";
+    cout << "File loaded successfully. (" << textData.size() << " characters)\n";
 }
 
 // ─── Manual Input ─────────────────────────────────────────────────────────────
@@ -97,24 +97,25 @@ void manualInput() {
 }
 
 // ─── Highlight Matches ────────────────────────────────────────────────────────
-void highlightMatches(string text, string pattern, vector<int> matches) {
+void highlightMatches(const string& text, const string& pattern, const vector<int>& matches) {
 
     if (matches.empty()) {
         cout << "No matches to highlight.\n";
         return;
     }
 
-    int m = pattern.length();
+    int n = (int)text.length();
+    int m = (int)pattern.length();
 
-    vector<bool> marked(text.length(), false);
+    vector<bool> marked(n, false);
     for (int pos : matches)
-        for (int j = 0; j < m && pos + j < (int)text.length(); j++)
+        for (int j = 0; j < m && pos + j < n; j++)
             marked[pos + j] = true;
 
     bool inside = false;
-    for (int i = 0; i < (int)text.length(); i++) {
-        if ( marked[i] && !inside) { cout << "["; inside = true;  }
-        if (!marked[i] &&  inside) { cout << "]"; inside = false; }
+    for (int i = 0; i < n; i++) {
+        if (marked[i] && !inside) { cout << "["; inside = true; }
+        if (!marked[i] && inside) { cout << "]"; inside = false; }
         cout << text[i];
     }
     if (inside) cout << "]";
@@ -122,16 +123,21 @@ void highlightMatches(string text, string pattern, vector<int> matches) {
 }
 
 // ─── Boyer-Moore Algorithm ────────────────────────────────────────────────────
-vector<int> boyerMoore(string text, string pattern, Statistics &stats) {
+//
+//  Uses the bad-character heuristic.
+//  Compares right-to-left; on mismatch shifts by max(1, j - badChar[text[s+j]]).
+//  shift += 1 on match so overlapping occurrences are detected.
+//
+vector<int> boyerMoore(const string& text, const string& pattern, Statistics& stats) {
 
     vector<int> matches;
-    int n = text.length();
-    int m = pattern.length();
+    int n = (int)text.length();
+    int m = (int)pattern.length();
 
     if (m == 0 || n == 0 || m > n)
         return matches;
 
-    // Bad character table
+    // Build bad-character table
     vector<int> badChar(256, -1);
     for (int i = 0; i < m; i++)
         badChar[(unsigned char)pattern[i]] = i;
@@ -149,12 +155,14 @@ vector<int> boyerMoore(string text, string pattern, Statistics &stats) {
         }
 
         if (j < 0) {
+            // Full match found
             matches.push_back(shift);
             stats.matches++;
-            shift += 1;  // +1 supports overlapping matches
-        } else {
-            int badIndex = badChar[(unsigned char)text[shift + j]];
-            shift += max(1, j - badIndex);
+            shift += 1;  // advance by 1 to allow overlapping matches
+        }
+        else {
+            int bc = badChar[(unsigned char)text[shift + j]];
+            shift += max(1, j - bc);
         }
     }
 
@@ -162,33 +170,40 @@ vector<int> boyerMoore(string text, string pattern, Statistics &stats) {
 }
 
 // ─── Rabin-Karp Algorithm ─────────────────────────────────────────────────────
-vector<int> rabinKarp(string text, string pattern, Statistics &stats) {
+//
+//  Uses a rolling polynomial hash (base 256, modulus 101).
+//  On a hash match, verifies character-by-character.
+//  Advances by 1 each step so overlapping occurrences are detected.
+//
+vector<int> rabinKarp(const string& text, const string& pattern, Statistics& stats) {
 
     vector<int> matches;
-    int n = text.length();
-    int m = pattern.length();
+    int n = (int)text.length();
+    int m = (int)pattern.length();
 
     if (m == 0 || n == 0 || m > n)
         return matches;
 
-    const int d = 256;
-    const int q = 101;
+    const int d = 256;   // alphabet size
+    const int q = 101;   // a prime modulus
 
-    int h = 1;
+    // h = d^(m-1) % q  (used to drop the leading digit)
+    long long h = 1;
     for (int i = 0; i < m - 1; i++)
         h = (h * d) % q;
 
-    int patHash = 0, winHash = 0;
+    long long patHash = 0, winHash = 0;
     for (int i = 0; i < m; i++) {
-        patHash = (d * patHash + pattern[i]) % q;
-        winHash = (d * winHash + text[i])    % q;
+        patHash = (d * patHash + (unsigned char)pattern[i]) % q;
+        winHash = (d * winHash + (unsigned char)text[i]) % q;
     }
 
     for (int i = 0; i <= n - m; i++) {
 
-        stats.comparisons++;
+        stats.comparisons++;  // hash comparison
 
         if (patHash == winHash) {
+            // Verify character by character to rule out spurious hits
             bool match = true;
             for (int j = 0; j < m; j++) {
                 stats.comparisons++;
@@ -200,8 +215,9 @@ vector<int> rabinKarp(string text, string pattern, Statistics &stats) {
             }
         }
 
+        // Roll the hash: remove text[i], add text[i+m]
         if (i < n - m) {
-            winHash = (d * (winHash - text[i] * h) + text[i + m]) % q;
+            winHash = (d * (winHash - (unsigned char)text[i] * h) + (unsigned char)text[i + m]) % q;
             if (winHash < 0) winHash += q;
         }
     }
@@ -210,22 +226,47 @@ vector<int> rabinKarp(string text, string pattern, Statistics &stats) {
 }
 
 // ─── Print Statistics ─────────────────────────────────────────────────────────
-void printStatistics(Statistics stats) {
+void printStatistics(const Statistics& stats) {
 
     cout << "\n========== Statistics ==========\n";
-    cout << "Algorithm      : " << stats.algorithm     << "\n";
-    cout << "Comparisons    : " << stats.comparisons   << "\n";
-    cout << "Matches        : " << stats.matches       << "\n";
+    cout << "Algorithm      : " << stats.algorithm << "\n";
+    cout << "Comparisons    : " << stats.comparisons << "\n";
+    cout << "Matches        : " << stats.matches << "\n";
     cout << fixed << setprecision(4);
     cout << "Execution Time : " << stats.executionTime << " ms\n";
     cout << "================================\n";
 }
 
-// ─── Boyer-Moore Search ───────────────────────────────────────────────────────
+// ─── Helper: parse comma-separated patterns ───────────────────────────────────
+static vector<string> splitPatterns(const string& input) {
+
+    vector<string> patterns;
+    string cur;
+
+    for (char c : input) {
+        if (c == ',') {
+            // trim leading/trailing spaces
+            while (!cur.empty() && cur.front() == ' ') cur.erase(cur.begin());
+            while (!cur.empty() && cur.back() == ' ') cur.pop_back();
+            if (!cur.empty()) patterns.push_back(cur);
+            cur.clear();
+        }
+        else {
+            cur += c;
+        }
+    }
+    while (!cur.empty() && cur.front() == ' ') cur.erase(cur.begin());
+    while (!cur.empty() && cur.back() == ' ') cur.pop_back();
+    if (!cur.empty()) patterns.push_back(cur);
+
+    return patterns;
+}
+
+// ─── Boyer-Moore Search (menu handler) ───────────────────────────────────────
 void boyerMooreSearch() {
 
     if (textData.empty()) {
-        cout << "No text loaded.\n";
+        cout << "No text loaded. Please load a file or enter text first.\n";
         return;
     }
 
@@ -233,32 +274,24 @@ void boyerMooreSearch() {
     string input;
     getline(cin, input);
 
-    // Split by comma to support multiple patterns (Section 5.2)
-    vector<string> patterns;
-    string cur = "";
-    for (char c : input) {
-        if (c == ',') { if (!cur.empty()) patterns.push_back(cur); cur = ""; }
-        else cur += c;
-    }
-    if (!cur.empty()) patterns.push_back(cur);
+    vector<string> patterns = splitPatterns(input);
+    if (patterns.empty()) { cout << "No valid pattern entered.\n"; return; }
 
-    for (string pattern : patterns) {
-        while (!pattern.empty() && pattern.front() == ' ') pattern.erase(pattern.begin());
-        while (!pattern.empty() && pattern.back()  == ' ') pattern.pop_back();
-        if (pattern.empty()) continue;
+    for (const string& pattern : patterns) {
 
         Statistics stats;
         stats.algorithm = "Boyer-Moore";
 
-        auto start = high_resolution_clock::now();
+        auto t0 = high_resolution_clock::now();
         vector<int> matches = boyerMoore(textData, pattern, stats);
-        auto end   = high_resolution_clock::now();
-        stats.executionTime = duration<double, milli>(end - start).count();
+        auto t1 = high_resolution_clock::now();
+        stats.executionTime = duration<double, milli>(t1 - t0).count();
 
         cout << "\n--- Pattern: \"" << pattern << "\" ---\n";
         if (matches.empty()) {
             cout << "No matches found.\n";
-        } else {
+        }
+        else {
             for (int pos : matches)
                 cout << "Match at index: " << pos << "\n";
             cout << "\nHighlighted:\n";
@@ -268,11 +301,11 @@ void boyerMooreSearch() {
     }
 }
 
-// ─── Rabin-Karp Search ────────────────────────────────────────────────────────
+// ─── Rabin-Karp Search (menu handler) ────────────────────────────────────────
 void rabinKarpSearch() {
 
     if (textData.empty()) {
-        cout << "No text loaded.\n";
+        cout << "No text loaded. Please load a file or enter text first.\n";
         return;
     }
 
@@ -280,32 +313,24 @@ void rabinKarpSearch() {
     string input;
     getline(cin, input);
 
-    // Split by comma to support multiple patterns (Section 5.2)
-    vector<string> patterns;
-    string cur = "";
-    for (char c : input) {
-        if (c == ',') { if (!cur.empty()) patterns.push_back(cur); cur = ""; }
-        else cur += c;
-    }
-    if (!cur.empty()) patterns.push_back(cur);
+    vector<string> patterns = splitPatterns(input);
+    if (patterns.empty()) { cout << "No valid pattern entered.\n"; return; }
 
-    for (string pattern : patterns) {
-        while (!pattern.empty() && pattern.front() == ' ') pattern.erase(pattern.begin());
-        while (!pattern.empty() && pattern.back()  == ' ') pattern.pop_back();
-        if (pattern.empty()) continue;
+    for (const string& pattern : patterns) {
 
         Statistics stats;
         stats.algorithm = "Rabin-Karp";
 
-        auto start = high_resolution_clock::now();
+        auto t0 = high_resolution_clock::now();
         vector<int> matches = rabinKarp(textData, pattern, stats);
-        auto end   = high_resolution_clock::now();
-        stats.executionTime = duration<double, milli>(end - start).count();
+        auto t1 = high_resolution_clock::now();
+        stats.executionTime = duration<double, milli>(t1 - t0).count();
 
         cout << "\n--- Pattern: \"" << pattern << "\" ---\n";
         if (matches.empty()) {
             cout << "No matches found.\n";
-        } else {
+        }
+        else {
             for (int pos : matches)
                 cout << "Match at index: " << pos << "\n";
             cout << "\nHighlighted:\n";
@@ -315,11 +340,11 @@ void rabinKarpSearch() {
     }
 }
 
-// ─── Compare Algorithms ───────────────────────────────────────────────────────
+// ─── Compare Algorithms (menu handler) ───────────────────────────────────────
 void compareAlgorithms() {
 
     if (textData.empty()) {
-        cout << "No text loaded.\n";
+        cout << "No text loaded. Please load a file or enter text first.\n";
         return;
     }
 
@@ -327,7 +352,9 @@ void compareAlgorithms() {
     cout << "Enter pattern: ";
     getline(cin, pattern);
 
-    // Boyer-Moore
+    if (pattern.empty()) { cout << "No pattern entered.\n"; return; }
+
+    // ── Boyer-Moore ──────────────────────────────────────────────────────────
     Statistics bmStats;
     bmStats.algorithm = "Boyer-Moore";
     auto s1 = high_resolution_clock::now();
@@ -335,43 +362,47 @@ void compareAlgorithms() {
     auto e1 = high_resolution_clock::now();
     bmStats.executionTime = duration<double, milli>(e1 - s1).count();
 
-    // Rabin-Karp
+    // ── Rabin-Karp ───────────────────────────────────────────────────────────
     Statistics rkStats;
     rkStats.algorithm = "Rabin-Karp";
     auto s2 = high_resolution_clock::now();
-    rabinKarp(textData, pattern, rkStats);
+    vector<int> rkMatches = rabinKarp(textData, pattern, rkStats);
     auto e2 = high_resolution_clock::now();
     rkStats.executionTime = duration<double, milli>(e2 - s2).count();
 
+    // ── Print matches ────────────────────────────────────────────────────────
+    cout << "\n--- Pattern: \"" << pattern << "\" ---\n";
     if (bmMatches.empty()) {
-        cout << "\nNo matches found.\n";
-    } else {
+        cout << "No matches found.\n";
+    }
+    else {
         for (int pos : bmMatches)
             cout << "Match at index: " << pos << "\n";
         cout << "\nHighlighted:\n";
         highlightMatches(textData, pattern, bmMatches);
     }
 
+    // ── Side-by-side comparison table ────────────────────────────────────────
     cout << "\n======== ALGORITHM COMPARISON ========\n";
     cout << left
-         << setw(20) << "Metric"
-         << setw(15) << "Boyer-Moore"
-         << setw(15) << "Rabin-Karp" << "\n";
+        << setw(20) << "Metric"
+        << setw(15) << "Boyer-Moore"
+        << setw(15) << "Rabin-Karp" << "\n";
     cout << string(50, '-') << "\n";
     cout << setw(20) << "Comparisons"
-         << setw(15) << bmStats.comparisons
-         << setw(15) << rkStats.comparisons << "\n";
+        << setw(15) << bmStats.comparisons
+        << setw(15) << rkStats.comparisons << "\n";
     cout << setw(20) << "Matches"
-         << setw(15) << bmStats.matches
-         << setw(15) << rkStats.matches << "\n";
+        << setw(15) << bmStats.matches
+        << setw(15) << rkStats.matches << "\n";
     cout << fixed << setprecision(4);
     cout << setw(20) << "Time (ms)"
-         << setw(15) << bmStats.executionTime
-         << setw(15) << rkStats.executionTime << "\n";
+        << setw(15) << bmStats.executionTime
+        << setw(15) << rkStats.executionTime << "\n";
     cout << string(50, '-') << "\n";
     cout << "Fewer Comparisons : "
-         << (bmStats.comparisons <= rkStats.comparisons ? "Boyer-Moore" : "Rabin-Karp") << "\n";
+        << (bmStats.comparisons <= rkStats.comparisons ? "Boyer-Moore" : "Rabin-Karp") << "\n";
     cout << "Faster Execution  : "
-         << (bmStats.executionTime <= rkStats.executionTime ? "Boyer-Moore" : "Rabin-Karp") << "\n";
+        << (bmStats.executionTime <= rkStats.executionTime ? "Boyer-Moore" : "Rabin-Karp") << "\n";
     cout << "======================================\n";
 }
