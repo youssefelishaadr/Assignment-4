@@ -80,7 +80,7 @@ g++ -O2 -std=c++17 -o string_processing string_processing.cpp
 | DATA STRUCTURE| STRUCTURE | Match found                 |
 | HELLO WORLD   | TEST      | No match                    |
 | MISSISSIPPI   | ISSI      | Multiple matches             |
-| ALGORITHM     | RITH      | No match                    |
+| ALGORITHM     | RITH      | match                    |
 
 > Full output for all test cases in `test_cases.txt`
 
@@ -94,5 +94,5 @@ void manualInput();
 void boyerMooreSearch();
 void rabinKarpSearch();
 void compareAlgorithms();
-void printStatistics();
+void printStatistics(const Statistics &stats);
 ```

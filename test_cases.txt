@@ -1,0 +1,44 @@
+TEST CASE 1
+Text: AAAAAAAAA
+Pattern: AAA
+Expected Result:
+Match at index: 0
+Match at index: 1
+Match at index: 2
+Match at index: 3
+Match at index: 4
+Match at index: 5
+Match at index: 6
+
+----------------------------------------
+
+TEST CASE 2
+Text: DATA STRUCTURE
+Pattern: STRUCTURE
+Expected Result:
+Match at index: 5
+
+----------------------------------------
+
+TEST CASE 3
+Text: HELLO WORLD
+Pattern: TEST
+Expected Result:
+No matches found
+
+----------------------------------------
+
+TEST CASE 4
+Text: MISSISSIPPI
+Pattern: ISSI
+Expected Result:
+Match at index: 1
+Match at index: 4
+
+----------------------------------------
+
+TEST CASE 5
+Text: ALGORITHM
+Pattern: RITH
+Expected Result:
+Match at index: 4
